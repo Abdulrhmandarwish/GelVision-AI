@@ -1,0 +1,13 @@
+train: ../train/images
+val: ../valid/images
+test: ../test/images
+
+nc: 2
+names: ['Lane', 'ladder']
+
+roboflow:
+  workspace: abdulrahmans-workspace-hhcfj
+  project: gelvision-lanes
+  version: dataset
+  license: CC BY 4.0
+  url: https://universe.roboflow.com/abdulrahmans-workspace-hhcfj/gelvision-lanes/dataset/dataset

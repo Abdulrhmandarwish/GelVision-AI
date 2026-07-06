@@ -1,0 +1,52 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+*.egg
+
+# Virtual environments
+.env
+.venv
+env/
+venv/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Testing
+.pytest_cache/
+htmlcov/
+.coverage
+
+# Project-specific
+data/raw/
+data/processed/
+data/roboflow_upload/
+*.zip
+scratch/
+temp_annotated_pdf.jpg
+reports/
+notebooks/
+
+# Large files (use Git LFS)
+# models/best.pt
+# models/unet_best.pth
+
+# OS files
+.DS_Store
+Thumbs.db
