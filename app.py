@@ -800,13 +800,29 @@ with tab_analysis:
         unsafe_allow_html=True,
     )
 
-    uploaded_file = st.file_uploader(
-        "Drop your gel image here or click to browse",
-        type=["jpg", "jpeg", "png", "tif", "tiff"],
-        help="Supported formats: JPEG, PNG, TIFF. Maximum size: 50 MB.",
-    )
+    import os
+    use_sample = st.checkbox("🧬 Use demo sample gel image for quick testing")
 
-    if uploaded_file is not None:
+    uploaded_file = None
+    if not use_sample:
+        uploaded_file = st.file_uploader(
+            "Drop your gel image here or click to browse",
+            type=["jpg", "jpeg", "png", "tif", "tiff"],
+            help="Supported formats: JPEG, PNG, TIFF. Maximum size: 50 MB.",
+        )
+
+    if use_sample:
+        sample_path = "assets/sample_gel.jpg"
+        if os.path.exists(sample_path):
+            pil_image = Image.open(sample_path).convert("RGB")
+            img_array = np.array(pil_image)
+            st.session_state.uploaded_image_array = img_array
+            original_gray, clahe_image, _ = preprocess_gel(img_array)
+            st.session_state.preprocessed_images = (original_gray, clahe_image)
+        else:
+            st.error("Demo sample gel image not found in assets/ directory.")
+            img_array = None
+    elif uploaded_file is not None:
         # ── Read & preprocess the upload ──────────────────────────
         file_bytes = uploaded_file.read()
         pil_image = Image.open(io.BytesIO(file_bytes)).convert("RGB")
@@ -819,6 +835,8 @@ with tab_analysis:
         original_gray, clahe_image, _ = preprocess_gel(img_array)
         st.session_state.preprocessed_images = (original_gray, clahe_image)
 
+    if (use_sample and os.path.exists("assets/sample_gel.jpg")) or (uploaded_file is not None):
+
         # ── Side-by-side image preview ────────────────────────────
         col_orig, col_pre = st.columns(2)
 
@@ -830,7 +848,7 @@ with tab_analysis:
             st.image(
                 pil_image,
                 use_container_width=True,
-                caption=f"{uploaded_file.name} — {pil_image.size[0]}×{pil_image.size[1]} px",
+                caption=f"{uploaded_file.name if uploaded_file else 'sample_gel.jpg'} — {pil_image.size[0]}×{pil_image.size[1]} px",
             )
 
         with col_pre:
@@ -868,9 +886,7 @@ with tab_analysis:
                 t_start = time.time()
 
                 with status_container:
-                    st.write("Loading models…")
-                    yolo_model, unet_model, device = cached_load_models()
-                    pipeline = GelAnalysisPipeline(yolo_model, unet_model, device)
+                    pipeline = load_pipeline()
 
                     st.write("Starting analysis…")
                     ladder_lane_num = ladder_override if ladder_override > 0 else None
