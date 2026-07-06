@@ -196,6 +196,16 @@ class GelAnalysisPipeline:
 
         detected_boxes = sorted(detected_boxes, key=lambda b: b["bbox"][0])
 
+        # Filter out extremely narrow boxes (false positives from YOLO)
+        if detected_boxes:
+            widths = [b["bbox"][2] - b["bbox"][0] for b in detected_boxes]
+            median_width = np.median(widths)
+            min_valid_width = 0.65 * median_width
+            detected_boxes = [
+                b for b in detected_boxes 
+                if (b["bbox"][2] - b["bbox"][0]) >= min_valid_width
+            ]
+
         # Assign 1-indexed lane numbers
         lanes: List[Dict[str, Any]] = []
         for idx, item in enumerate(detected_boxes):
@@ -232,6 +242,14 @@ class GelAnalysisPipeline:
             # Binary mask (threshold at 0.5)
             pred_mask = (pred.squeeze().cpu().numpy() > 0.5).astype(np.uint8)
 
+            # Filter out tiny spurious regions by area (noise reduction)
+            num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(pred_mask, connectivity=8)
+            cleaned_mask = np.zeros_like(pred_mask)
+            for i in range(1, num_labels):
+                if stats[i, cv2.CC_STAT_AREA] >= 40:  # Minimum pixel area for a valid band
+                    cleaned_mask[labels == i] = 1
+            pred_mask = cleaned_mask
+
             lane["crop"] = lane_resized
             lane["mask"] = pred_mask
 
@@ -243,8 +261,12 @@ class GelAnalysisPipeline:
             # 1-D horizontal profile of the mask
             profile = lane["mask"].mean(axis=1)
 
+            # Extract peaks with prominence to reject local background noise
             peaks, _ = find_peaks(
-                profile, height=band_threshold, distance=min_band_distance
+                profile, 
+                height=band_threshold, 
+                distance=min_band_distance,
+                prominence=0.05  # Peak must stand out from its local baseline
             )
 
             bands: List[Dict[str, Any]] = []
